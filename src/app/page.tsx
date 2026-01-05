@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 
 // Product Damage Detection UI
 // Main page for uploading an image, sending it to the backend, and visualizing predictions with bounding boxes.
@@ -51,8 +51,21 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [hoveredBoxIdx, setHoveredBoxIdx] = useState<number | null>(null);
   const [selectedBoxIdx, setSelectedBoxIdx] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<"confidence" | "name">("confidence");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   // Reference to the image element for calculating bounding box positions
   const imageRef = useRef<HTMLImageElement | null>(null);
+
+  // Sort predictions based on selected criteria
+  const sortedPredictions = useMemo(() => {
+    const sorted = [...predictions];
+    if (sortBy === "confidence") {
+      sorted.sort((a, b) => b.probability - a.probability);
+    } else {
+      sorted.sort((a, b) => a.tagName.localeCompare(b.tagName));
+    }
+    return sorted;
+  }, [predictions, sortBy]);
 
   /**
    * Handles file input change, uploads image to backend, and updates predictions
@@ -184,34 +197,139 @@ export default function Home() {
 
               {predictions.length > 0 && (
                 <div className="mt-6 border-t border-slate-600 pt-6">
-                  <h3 className="mb-4 text-sm font-semibold text-white">
-                    Detections ({predictions.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {predictions.map((pred, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() =>
-                          setSelectedBoxIdx(selectedBoxIdx === idx ? null : idx)
-                        }
-                        className={`w-full text-left rounded-lg p-3 text-sm transition-all ${
-                          selectedBoxIdx === idx
-                            ? "border-2 border-blue-400 bg-blue-500/20"
-                            : "bg-slate-600/50 hover:bg-slate-600/70 border-2 border-transparent"
-                        }`}
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-white">
+                      Detections ({predictions.length})
+                    </h3>
+                    <div className="flex gap-2">
+                      {/* View Mode Toggle */}
+                      <div className="flex gap-1 rounded-lg bg-slate-600/50 p-1">
+                        <button
+                          onClick={() => setViewMode("list")}
+                          className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                            viewMode === "list"
+                              ? "bg-blue-500/70 text-white"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                          title="List view"
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setViewMode("grid")}
+                          className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                            viewMode === "grid"
+                              ? "bg-blue-500/70 text-white"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                          title="Grid view"
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM13 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM3 14a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zM13 14a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Sort Dropdown */}
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as "confidence" | "name")}
+                        className="rounded bg-slate-600/50 px-2 py-1 text-xs font-medium text-slate-300 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <div className="font-medium text-white">
-                          {pred.tagName}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          Confidence:{" "}
-                          <span className="font-semibold text-blue-400">
-                            {(pred.probability * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      </button>
-                    ))}
+                        <option value="confidence">Sort by Confidence</option>
+                        <option value="name">Sort by Name</option>
+                      </select>
+                    </div>
                   </div>
+
+                  {/* Scrollable Detection List/Grid */}
+                  <div
+                    className={`max-h-96 overflow-y-auto rounded-lg bg-slate-600/20 p-3 ${
+                      viewMode === "grid" ? "grid grid-cols-2 gap-2" : "space-y-2"
+                    }`}
+                  >
+                    {sortedPredictions.map((pred, idx) => {
+                      const originalIdx = predictions.indexOf(pred);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() =>
+                            setSelectedBoxIdx(selectedBoxIdx === originalIdx ? null : originalIdx)
+                          }
+                          onMouseEnter={() => setHoveredBoxIdx(originalIdx)}
+                          onMouseLeave={() => setHoveredBoxIdx(null)}
+                          className={`text-left rounded-lg p-3 transition-all duration-200 ${
+                            selectedBoxIdx === originalIdx
+                              ? "border-2 border-blue-400 bg-blue-500/30 shadow-lg shadow-blue-500/20"
+                              : "border-2 border-transparent bg-slate-600/50 hover:bg-slate-600/70"
+                          } ${viewMode === "grid" ? "flex flex-col min-w-0" : ""}`}
+                        >
+                          {viewMode === "list" ? (
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="truncate font-medium text-white text-sm">
+                                  {pred.tagName}
+                                </div>
+                              </div>
+                              {/* Confidence Badge - List View */}
+                              <div
+                                className={`flex-shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                  pred.probability >= 0.8
+                                    ? "bg-green-500/30 text-green-300"
+                                    : pred.probability >= 0.6
+                                    ? "bg-yellow-500/30 text-yellow-300"
+                                    : "bg-orange-500/30 text-orange-300"
+                                }`}
+                              >
+                                {(pred.probability * 100).toFixed(0)}%
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Grid View */}
+                              <div className="truncate font-medium text-white text-sm mb-2">
+                                {pred.tagName}
+                              </div>
+                              <div className="w-full">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="rounded-full bg-slate-700/50 h-2 flex-1">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        pred.probability >= 0.8
+                                          ? "bg-green-500"
+                                          : pred.probability >= 0.6
+                                          ? "bg-yellow-500"
+                                          : "bg-orange-500"
+                                      }`}
+                                      style={{ width: `${pred.probability * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className={`ml-2 text-xs font-semibold flex-shrink-0 ${
+                                    pred.probability >= 0.8
+                                      ? "text-green-300"
+                                      : pred.probability >= 0.6
+                                      ? "text-yellow-300"
+                                      : "text-orange-300"
+                                  }`}>
+                                    {(pred.probability * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Scrollable hint */}
+                  {predictions.length > 4 && (
+                    <div className="mt-2 text-center text-xs text-slate-500">
+                      {predictions.length > 6 ? "Scroll to see more detections" : ""}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
