@@ -14,8 +14,9 @@ export async function POST(req: NextRequest) {
   backendForm.append("file", file);
 
   // Forward the request to the backend
+  const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8080";
   const backendRes = await fetch(
-    "http://localhost:8080/api/v1/custom-vision/predict-file",
+    `${backendUrl}/api/v1/custom-vision/predict-file`,
     {
       method: "POST",
       body: backendForm,

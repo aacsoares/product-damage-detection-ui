@@ -115,7 +115,7 @@ export default function Home() {
       height: box.height * img.height,
       border: "2px solid #f00",
       boxSizing: "border-box" as const,
-      pointerEvents: "none" as const,
+      pointerEvents: "auto" as const,
     };
   };
 
@@ -366,20 +366,27 @@ export default function Home() {
                       onClick={() =>
                         setSelectedBoxIdx(selectedBoxIdx === idx ? null : idx)
                       }
+                      role="button"
+                      tabIndex={0}
                     >
                       <div
                         style={{
                           border:
                             selectedBoxIdx === idx
                               ? "3px solid #60a5fa"
-                              : "2px solid #3b82f6",
+                              : hoveredBoxIdx === idx
+                              ? "2px solid #3b82f6"
+                              : "2px solid #1e40af",
                           width: "100%",
                           height: "100%",
                           cursor: "pointer",
                           boxShadow:
                             selectedBoxIdx === idx
                               ? "0 0 15px rgba(96, 165, 250, 0.6)"
+                              : hoveredBoxIdx === idx
+                              ? "0 0 8px rgba(59, 130, 246, 0.4)"
                               : "none",
+                          transition: "all 0.2s",
                         }}
                       />
                       {(hoveredBoxIdx === idx || selectedBoxIdx === idx) && (
